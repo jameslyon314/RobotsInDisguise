@@ -1,0 +1,82 @@
+#include <ArduinoInit.h>
+#include <SendOnlySoftwareSerial.h>
+
+void setup() {        
+  configArduino();
+}
+
+void loop() {
+
+  outputHigh(4);
+  pause (1000);
+  unsigned int sensor0;
+  sensor0 = readADC (0);
+  Serial.print ("Floor Sensor"):
+  Serial.println (sensor0);
+  outputLow (4);
+  pause (500);
+
+  /*outputHigh(10);
+  pause(3000);
+  outputLow(10);
+  outputHigh(11);
+  pause(1000);
+  outputLow(11);
+  outputHigh(12);
+  pause(1000);
+  outputLow(12);
+
+  motors('1', 'A', 100);       //Just a calibrating thing for turns.
+  pause (100);
+  motors('1', 'O', '0');
+  pause (10000);
+
+  motors('1', 'A', 100);
+  pause (200);
+  motors('1', 'O', '0');
+  pause(10000);
+
+  motors('1', 'A', 100);
+  pause (300);
+  motors('1', 'O', '0');
+  pause(10000);
+
+  motors('1', 'A', 100);
+  pause (400);
+  motors('1', 'O', '0');
+  pause(10000);
+
+  motors('1', 'A', 100);
+  pause (500);
+  motors('1', 'O', '0');
+  pause(10000);
+
+  outputHigh(12);
+  pause(10000);
+
+  motors('2', 'A', 100);       
+  pause (100);
+  motors('2', 'O', '0');
+  pause (10000);
+
+  motors('2', 'A', 100);
+  pause (200);
+  motors('2', 'O', '0');
+  pause(10000);
+
+  motors('2', 'A', 100);
+  pause (300);
+  motors('2', 'O', '0');
+  pause(10000);
+
+  motors('2', 'A', 100);
+  pause (400);
+  motors('2', 'O', '0');
+  pause(10000);
+
+  motors('2', 'A', 100);
+  pause (500);
+  motors('2', 'O', '0');
+  pause(10000);*/         //End calibration for turns
+  
+}
