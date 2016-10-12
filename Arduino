@@ -5,78 +5,119 @@ void setup() {
   configArduino();
 }
 
-void loop() {
-
-  outputHigh(4);
+void loop() { 
+ 
+  /*outputHigh(4);                    //calibration
   pause (1000);
   unsigned int sensor0;
   sensor0 = readADC (0);
-  Serial.print ("Floor Sensor"):
+  Serial.print ("Floor Sensor");
   Serial.println (sensor0);
   outputLow (4);
-  pause (500);
-
-  /*outputHigh(10);
-  pause(3000);
-  outputLow(10);
-  outputHigh(11);
-  pause(1000);
-  outputLow(11);
-  outputHigh(12);
-  pause(1000);
-  outputLow(12);
-
-  motors('1', 'A', 100);       //Just a calibrating thing for turns.
-  pause (100);
-  motors('1', 'O', '0');
-  pause (10000);
-
-  motors('1', 'A', 100);
-  pause (200);
-  motors('1', 'O', '0');
-  pause(10000);
-
-  motors('1', 'A', 100);
-  pause (300);
-  motors('1', 'O', '0');
-  pause(10000);
-
-  motors('1', 'A', 100);
-  pause (400);
-  motors('1', 'O', '0');
-  pause(10000);
-
-  motors('1', 'A', 100);
-  pause (500);
-  motors('1', 'O', '0');
-  pause(10000);
-
-  outputHigh(12);
-  pause(10000);
-
-  motors('2', 'A', 100);       
-  pause (100);
-  motors('2', 'O', '0');
-  pause (10000);
-
-  motors('2', 'A', 100);
-  pause (200);
-  motors('2', 'O', '0');
-  pause(10000);
-
-  motors('2', 'A', 100);
-  pause (300);
-  motors('2', 'O', '0');
-  pause(10000);
-
-  motors('2', 'A', 100);
-  pause (400);
-  motors('2', 'O', '0');
-  pause(10000);
-
-  motors('2', 'A', 100);
-  pause (500);
-  motors('2', 'O', '0');
-  pause(10000);*/         //End calibration for turns
+  pause (500);*/
   
+  /*motors('2', 'A', 100);
+  pause (500);
+  motors('2', 'O', '0');
+  pause(10000);*/
+  
+}//////////////////////////////////////////////////////////////////////////////
+
+void motorsoff(){
+  motors('B', 'O', 0);
+  pause(100);
+  return;
 }
+
+void pivotright(int r){        //~90deg is 265
+  motorsoff();
+  motors('2', 'A', 100);
+  motors('1', 'B', 100);
+  pause(r);
+  motorsoff();  
+  return;
+}
+
+void pivotleft(int l){         //~90deg is 265
+  motorsoff();
+  motors('2', 'B', 100);
+  motors('1', 'A', 100);
+  pause(l);
+  motorsoff();
+  return;
+}
+
+void onwards(int on){     //full power
+  motorsoff();
+  motors('B', 'A', 100);
+  pause(on);
+  motorsoff();
+  return;
+}
+
+void backwards(int back,int power){ //variable power
+  motorsoff();
+  motors('B', 'B', power);
+  pause(back);
+  motorsoff();
+  return;
+}
+
+unsigned int getFloorSensor(byte pin){    //pin should be 0
+  outputHigh(4);
+  pause(200);
+  unsigned int fsensor = 0;
+  fsensor = readADC(pin);
+  outputLow(4);
+  return(fsensor);
+}
+unsigned int getCeilingSensor(byte pin){    //pin should be ...
+  outputHigh(0);//SHOULD NOT BE ZERO, CHOOSE THE CORRECT PIN
+  pause(200);
+  unsigned int csensor = 0;
+  csensor = readADC(pin);
+  outputLow(0);//SHOULD NOT BE ZERO
+  return(csensor);
+}
+void bumped(){
+  pause(5);
+  if(readInput(2)==1 && readInput(3)==1)return; //false alarm
+  motorsoff();
+  if(readInput(2)==0 && readInput(3)==0){       //bolth hit
+    motorsoff();                                //this is all temporary. unsure if it actually works...
+    backwards(500,60);
+    pivotleft(133);
+    onwards(300);
+    return;
+  }
+  else if(readInput(2)==0){                     //just left
+    motorsoff();
+    //yay code
+    return;
+  }
+  else{/*(readInput(3)==0){*/                   //just right
+    motorsoff();
+    //yay code
+    return;
+  }
+}
+
+  
+
+
+
+
+
+void HappyDays(){     //party
+    outputHigh(12); 
+    pause(20);
+    outputLow(12);
+    outputHigh(11);
+    pause(20);
+    outputLow(11);
+    outputHigh(10);
+    pause(20);
+    outputLow(10);
+}
+
+
