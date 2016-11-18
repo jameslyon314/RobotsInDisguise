@@ -1,12 +1,220 @@
 #include <ArduinoInit.h>
 #include <SendOnlySoftwareSerial.h>
 
-void setup() {        
-  configArduino();
+//////////////////////////////variables///////////////////////////////////////////
+
+  byte homecolor = 0;
+  int rotation = 8;
+  unsigned int neshhold = 26000;  //less
+  unsigned int fleshhold = 11000;
+  unsigned int reshhold = 27000;  //more
+  unsigned int leshhold = 9600;   //less
+  unsigned int ceshhold = 30000;  //less
+  byte floorcolor = 0;
+  
+//////////////////////////////variables////////////////////////////////////////////
+//////////////////////////////subroutines/////////////////////////////////////////
+
+void motorsoff(){
+  motors('B', 'O', 0);
+  pause(50);
+  return;
 }
 
+void pivotright(int r){        //~90deg is 266
+  motorsoff();
+  Serial.print ("pivright1");
+  Serial.print (rotation);
+  motors('2', 'A', 100);
+  motors('1', 'B', 100);
+  pause(r);
+  motorsoff();
+  int diff = r/133;
+  rotation += diff;  
+  Serial.print ("pivright2");
+  Serial.print (rotation);
+  return;
+}
+
+void pivotleft(int l){         //~90deg is 266
+  Serial.print ("pivleft1");
+  Serial.print (rotation);
+  motorsoff();
+  motors('2', 'B', 100);
+  motors('1', 'A', 100);
+  pause(l);
+  motorsoff();
+  int dif = l/133;
+  rotation -= dif;
+  Serial.print ("pivleft2");
+  Serial.print (rotation);
+  return;
+}
+
+void onwards(int on){     //full power
+  motors('B', 'A', 100);
+  pause(on);
+  return;
+}
+
+void backwards(int back,int power){ //variable power
+  pause(50);
+  motors('B', 'B', power);
+  pause(back);
+  return;
+}
+
+void correctoneself(){
+  motorsoff();
+  Serial.print ("correct1");
+  Serial.print (rotation);
+  if (rotation == 8){
+    return;
+  }
+  else if (rotation < 8){
+    int d = 8 - rotation;
+    pivotright(d*133);
+    return;
+  }
+  else{
+    int e = rotation - 8;
+    pivotleft(e*133);
+    return;
+  } 
+  Serial.print ("correct2");
+  Serial.print (rotation);
+}
+
+unsigned int getSensor(byte pin){    //pin should be ...
+  //SHOULD NOT BE ZERO, CHOOSE THE CORRECT PIN
+  unsigned int sensor = 0;
+  sensor = readADC(pin);
+  return(sensor);
+}
+void bumped(){
+  pause(5);
+  if(readInput(2)==1 && readInput(3)==1)return; //false alarm
+  motorsoff();
+  if(readInput(2)==0 && readInput(3)==0){       //bolth hit
+    motorsoff();                                //this is all temporary. unsure if it actually works...
+    backwards(500,80);
+    pivotleft(133);
+    onwards(300);
+    correctoneself();
+    return;
+  }
+  else if(readInput(2)==0){                     //right hit
+    motorsoff();
+    backwards(500,80);
+    pivotleft(133);
+    onwards(350);
+    correctoneself();
+    return;
+  }
+  else{/*(readInput(3)==0){*/                   //left hit
+    motorsoff();
+    backwards(500,80);
+    pivotright(133);
+    onwards(350);
+    correctoneself();
+    return;
+  }
+}
+
+unsigned int getFloorSensor(){    //pin should be 0
+  outputHigh(4);
+  pause(200);
+  unsigned int fsensor = 0;
+  fsensor = readADC(0);
+  outputLow(4);
+  return(fsensor);
+}
+
+///////////////////////////subroutines/////////////////////////////////////////
+///////////////////////////setup////////////////////////////////////////////////
+  
+
+void setup() {        
+  configArduino();
+  attachInterrupt (0, bumped, LOW);
+  attachInterrupt (1, bumped, LOW);
+
+  unsigned int fsensor = getFloorSensor();
+  homecolor = 0;
+  if (fsensor >= fleshhold){        //black is 1
+    homecolor = 1;
+  }
+  
+}
+/////////////////////////////setup/////////////////////////////////////////////
+/////////////////////////////loop/////////////////////////////////////////////
+
 void loop() { 
- 
+  
+  /*do{
+    unsigned int value = getSensor(5);
+    Serial.println("Left: ");
+    Serial.println(value);
+    pause(500);
+    unsigned int value1 = getSensor(4);
+    Serial.println("Right: ");
+    Serial.println(value1);
+    pause(500);
+    unsigned int value2 = getSensor(3);
+    Serial.println("Nav: ");
+    Serial.println(value2);
+    pause(500);
+    unsigned int value3 = getSensor(2);
+    Serial.println("Center: ");
+    Serial.println(value3);
+    pause(500); 
+  }while(1 == 1);*/
+  
+  outputHigh(4);
+  pause (1000);
+  unsigned int sensor0;
+  sensor0 = readADC (0);
+  Serial.println (sensor0);
+  if (sensor0 >= fleshhold){
+    floorcolor = 1;
+  }
+
+  while (floorcolor == homecolor){
+    ceilingLoop:{
+      unsigned int sensor3 = getSensor(3); 
+      if (sensor3 < neshhold){
+      rotation = 8; //and onwards
+      }
+      else if (sensor3 >= neshhold){
+      pivotright(133);
+      goto ceilingLoop;
+      }
+    }
+    onwards(150);
+    sensor0 = readADC (0);
+    if (sensor0 >= fleshhold){
+      floorcolor = 1;
+    }
+  }
+  while (floorcolor != homecolor){
+    if (getSensor(2) < ceshhold){         //center
+      onwards(100); 
+    }
+    else if (getSensor(5) < leshhold ){   //left
+      pivotleft(133);
+    }
+    else if (getSensor(4) > reshhold ){   //right
+      pivotright(133);
+    }
+    else{
+      onwards(100);
+    }    
+    sensor0 = readADC (0);
+    if (sensor0 >= fleshhold){
+      floorcolor = 1;
+    }
+  }
+
   /*outputHigh(4);                    //calibration
   pause (1000);
   unsigned int sensor0;
@@ -16,108 +224,7 @@ void loop() {
   outputLow (4);
   pause (500);*/
   
-  /*motors('2', 'A', 100);
-  pause (500);
-  motors('2', 'O', '0');
-  pause(10000);*/
-  
 }//////////////////////////////////////////////////////////////////////////////
 
-void motorsoff(){
-  motors('B', 'O', 0);
-  pause(100);
-  return;
-}
-
-void pivotright(int r){        //~90deg is 265
-  motorsoff();
-  motors('2', 'A', 100);
-  motors('1', 'B', 100);
-  pause(r);
-  motorsoff();  
-  return;
-}
-
-void pivotleft(int l){         //~90deg is 265
-  motorsoff();
-  motors('2', 'B', 100);
-  motors('1', 'A', 100);
-  pause(l);
-  motorsoff();
-  return;
-}
-
-void onwards(int on){     //full power
-  motorsoff();
-  motors('B', 'A', 100);
-  pause(on);
-  motorsoff();
-  return;
-}
-
-void backwards(int back,int power){ //variable power
-  motorsoff();
-  motors('B', 'B', power);
-  pause(back);
-  motorsoff();
-  return;
-}
-
-unsigned int getFloorSensor(byte pin){    //pin should be 0
-  outputHigh(4);
-  pause(200);
-  unsigned int fsensor = 0;
-  fsensor = readADC(pin);
-  outputLow(4);
-  return(fsensor);
-}
-unsigned int getCeilingSensor(byte pin){    //pin should be ...
-  outputHigh(0);//SHOULD NOT BE ZERO, CHOOSE THE CORRECT PIN
-  pause(200);
-  unsigned int csensor = 0;
-  csensor = readADC(pin);
-  outputLow(0);//SHOULD NOT BE ZERO
-  return(csensor);
-}
-void bumped(){
-  pause(5);
-  if(readInput(2)==1 && readInput(3)==1)return; //false alarm
-  motorsoff();
-  if(readInput(2)==0 && readInput(3)==0){       //bolth hit
-    motorsoff();                                //this is all temporary. unsure if it actually works...
-    backwards(500,60);
-    pivotleft(133);
-    onwards(300);
-    return;
-  }
-  else if(readInput(2)==0){                     //just left
-    motorsoff();
-    //yay code
-    return;
-  }
-  else{/*(readInput(3)==0){*/                   //just right
-    motorsoff();
-    //yay code
-    return;
-  }
-}
-
-  
-
-
-
-
-
-void HappyDays(){     //party
-    outputHigh(12); 
-    pause(20);
-    outputLow(12);
-    outputHigh(11);
-    pause(20);
-    outputLow(11);
-    outputHigh(10);
-    pause(20);
-    outputLow(10);
-}
 
 
