@@ -1,137 +1,139 @@
 #include <ArduinoInit.h>
 #include <SendOnlySoftwareSerial.h>
 
-//////////////////////////////variables///////////////////////////////////////////
+//////////////////////////////variables///////////////////////////////////////
 
   byte homecolor = 0;
-  int rotation = 8;
-  unsigned int neshhold = 26000;  //less
-  unsigned int fleshhold = 11000;
-  unsigned int reshhold = 27000;  //more
-  unsigned int leshhold = 9600;   //less
-  unsigned int ceshhold = 30000;  //less
+  int rotation = 16;
+  unsigned int neshhold = 31000;  //less  //Navigation threshold
+  unsigned int fleshhold = 11000;         //floor threshold
+  unsigned int reshhold = 40000;  //more  //right
+  unsigned int leshhold = 25000;  //less  //left
+  unsigned int ceshhold = 30000;  //less  //center
   byte floorcolor = 0;
+  byte set = 0;
   
-//////////////////////////////variables////////////////////////////////////////////
-//////////////////////////////subroutines/////////////////////////////////////////
+//////////////////////////////variables///////////////////////////////////////
+///////////////////////////subroutines////////////////////////////////////////
 
 void motorsoff(){
-  motors('B', 'O', 0);
-  pause(50);
+  motors('B', 'O', 0);               //both of them off
+  pause(50);                         //pause, no motor burnouts!
   return;
 }
 
-void pivotright(int r){        //~90deg is 266
+void pivotright(int r){              //~90deg is 268ms
   motorsoff();
-  Serial.print ("pivright1");
-  Serial.print (rotation);
-  motors('2', 'A', 100);
-  motors('1', 'B', 100);
-  pause(r);
+  //Serial.print ("pivright1");         //debug
+  //Serial.print (rotation);            //debug
+  motors('2', 'A', 100);        
+  motors('1', 'B', 100);             //motors in opposite direction
+  pause(r);                          //pause desired amount of time
   motorsoff();
-  int diff = r/133;
-  rotation += diff;  
-  Serial.print ("pivright2");
-  Serial.print (rotation);
+  int diff = r/67;                   //how many 22.5 degrees it has turned
+  rotation += diff;                  //add that to rotation count (right is positive)
+  //Serial.print ("pivright2");         //debug
+  //Serial.print (rotation);            //debug
   return;
 }
 
-void pivotleft(int l){         //~90deg is 266
-  Serial.print ("pivleft1");
-  Serial.print (rotation);
+void pivotleft(int l){               //essentially same as pivotright
+  //Serial.print ("pivleft1");
+  //Serial.print (rotation);
   motorsoff();
   motors('2', 'B', 100);
   motors('1', 'A', 100);
   pause(l);
   motorsoff();
-  int dif = l/133;
-  rotation -= dif;
-  Serial.print ("pivleft2");
-  Serial.print (rotation);
+  int dif = l/67;
+  rotation -= dif;                   //subtracts from count, left is negative
+  //Serial.print ("pivleft2");
+  //Serial.print (rotation);
   return;
 }
 
-void onwards(int on){     //full power
-  motors('B', 'A', 100);
-  pause(on);
+void onwards(int on){   
+  motors('B', 'A', 100);             //full power
+  pause(on);                         //for desired time
+  return;                            //does not turn motors off! (intended)
+}
+
+void backwards(int back,int power){ //only used in bumpers              
+  motors('B', 'B', power);          //variable power
+  pause(back);                      //for desired time
   return;
 }
 
-void backwards(int back,int power){ //variable power
-  pause(50);
-  motors('B', 'B', power);
-  pause(back);
-  return;
-}
-
-void correctoneself(){
+void correctoneself(){              //returns to forward facing
   motorsoff();
-  Serial.print ("correct1");
-  Serial.print (rotation);
-  if (rotation == 8){
+  //Serial.print ("correct1");          //debug
+  //Serial.print (rotation);            //debug
+  if (rotation == 16){              //already forward facing
     return;
   }
-  else if (rotation < 8){
-    int d = 8 - rotation;
-    pivotright(d*133);
+  else if (rotation < 16){          //if it is turned left
+    int d = 16 - rotation;          //how many 22.5degs it is off
+    pivotright(d*67);               //pivots right for that
     return;
   }
-  else{
-    int e = rotation - 8;
-    pivotleft(e*133);
+  else{                             //same process but when turned right
+    int e = rotation - 16;
+    pivotleft(e*67);
     return;
-  } 
-  Serial.print ("correct2");
-  Serial.print (rotation);
+  }   
+  //Serial.print ("correct2");          //debug
+  //Serial.print (rotation);            //debug
 }
 
-unsigned int getSensor(byte pin){    //pin should be ...
-  //SHOULD NOT BE ZERO, CHOOSE THE CORRECT PIN
+unsigned int getSensor(byte pin){   
   unsigned int sensor = 0;
-  sensor = readADC(pin);
+  sensor = readADC(pin);             //reads and returns value from desired sensor
   return(sensor);
 }
+
 void bumped(){
   pause(5);
-  if(readInput(2)==1 && readInput(3)==1)return; //false alarm
-  motorsoff();
-  if(readInput(2)==0 && readInput(3)==0){       //bolth hit
-    motorsoff();                                //this is all temporary. unsure if it actually works...
-    backwards(500,80);
-    pivotleft(133);
-    onwards(300);
-    correctoneself();
+  
+  if(readInput(2)==1 && readInput(3)==1)  //false alarm
+    return;   
+  motorsoff(); 
+  if(readInput(2)==0 && readInput(3)==0){       //both hit
+    motorsoff();                               
+    backwards(650,80);                    //backwards
+    pivotright(134);                       //right handed
+    onwards(400);                         //move forward
+    correctoneself();                     //return to normal
     return;
   }
   else if(readInput(2)==0){                     //right hit
     motorsoff();
-    backwards(500,80);
-    pivotleft(133);
-    onwards(350);
-    correctoneself();
+    backwards(400,80);                    //backwards
+    pivotleft(134);                        //pivot left
+    onwards(550);                         //forward
+    correctoneself();                     //return to normal
     return;
   }
   else{/*(readInput(3)==0){*/                   //left hit
     motorsoff();
-    backwards(500,80);
-    pivotright(133);
-    onwards(350);
+    backwards(650,80);                    //same as others
+    pivotright(134);
+    onwards(400);
     correctoneself();
     return;
   }
 }
 
-unsigned int getFloorSensor(){    //pin should be 0
-  outputHigh(4);
+unsigned int getFloorSensor(){ 
+  outputHigh(4);                          //lights up the LED
   pause(200);
   unsigned int fsensor = 0;
-  fsensor = readADC(0);
-  outputLow(4);
-  return(fsensor);
+  fsensor = readADC(0);                   //reads the floor sensor
+  outputLow(4);                           //turns the light back off
+  return(fsensor);                        //returns the value
 }
 
-///////////////////////////subroutines/////////////////////////////////////////
-///////////////////////////setup////////////////////////////////////////////////
+///////////////////////////subroutines////////////////////////////////////////
+/////////////////////////////setup////////////////////////////////////////////
   
 
 void setup() {        
@@ -140,13 +142,13 @@ void setup() {
   attachInterrupt (1, bumped, LOW);
 
   unsigned int fsensor = getFloorSensor();
-  homecolor = 0;
-  if (fsensor >= fleshhold){        //black is 1
-    homecolor = 1;
+  homecolor = 0;                          //homecolor is white by default
+  if (fsensor >= fleshhold){              //if over threshold,
+    homecolor = 1;                        //home becomes black, 1
   }
-  
 }
-/////////////////////////////setup/////////////////////////////////////////////
+
+/////////////////////////////setup////////////////////////////////////////////
 /////////////////////////////loop/////////////////////////////////////////////
 
 void loop() { 
@@ -168,63 +170,73 @@ void loop() {
     Serial.println("Center: ");
     Serial.println(value3);
     pause(500); 
-  }while(1 == 1);*/
+  }while(1 == 1); */                            //sensor value debug
   
-  outputHigh(4);
-  pause (1000);
-  unsigned int sensor0;
-  sensor0 = readADC (0);
-  Serial.println (sensor0);
+  unsigned int sensor0 = getFloorSensor();      //sets the current floor color
   if (sensor0 >= fleshhold){
     floorcolor = 1;
   }
+  else if (sensor0 < fleshhold){
+    floorcolor = 0;
+  }
 
-  while (floorcolor == homecolor){
-    ceilingLoop:{
-      unsigned int sensor3 = getSensor(3); 
-      if (sensor3 < neshhold){
-      rotation = 8; //and onwards
+  while (floorcolor == homecolor){         //while it's on home turf
+    if (set == 0){                              //if forward is not set,  
+      ceilingLoop:{                             //loop to find nav light
+        unsigned int sensor3 = getSensor(3);    //nav sensor value
+        if (sensor3 < neshhold){                //if acceptable value
+        rotation = 16; //and onwards            //sets that as forward, continues
+        } 
+        else if (sensor3 >= neshhold){          //if not acceptable,
+        pivotright(67);                         //turn 22.5 deg right
+        
+          if(rotation == 32){                   //if made full turn
+            pivotright(402);                    //turn 135 deg
+            onwards(250);                       //and move forward
+          }
+          
+        goto ceilingLoop;                       //and try again
+        }
       }
-      else if (sensor3 >= neshhold){
-      pivotright(133);
-      goto ceilingLoop;
-      }
+      set = 1;                                  //make it set
     }
-    onwards(150);
-    sensor0 = readADC (0);
-    if (sensor0 >= fleshhold){
+    onwards(350);                               //move towards other side
+    sensor0 = readADC (0);                      //check floor color    
+    if (sensor0 >= fleshhold){                  //and reset it to current
       floorcolor = 1;
     }
+    else if (sensor0 < fleshhold){
+      floorcolor = 0;
+    }
   }
-  while (floorcolor != homecolor){
-    if (getSensor(2) < ceshhold){         //center
-      onwards(100); 
+ 
+  
+  while (floorcolor != homecolor){         //while on enemy turf
+    onwards(850);                               //move past border
+    if (getSensor(2) < ceshhold){               //if center sensor value is good
+      while(getSensor(2) < ceshhold){
+        onwards(300);                           //move forward constantly
+      }
+      pivotright(536);                          //when light is extinguished, do a 180
     }
-    else if (getSensor(5) < leshhold ){   //left
-      pivotleft(133);
-    }
-    else if (getSensor(4) > reshhold ){   //right
-      pivotright(133);
+    else if (getSensor(5) < leshhold ){         //if left sensor value is good
+      pivotleft(67);                            //turn left (until center is good)
+     }
+    else if (getSensor(4) > reshhold ){         //same for right
+      pivotright(67);
     }
     else{
-      onwards(100);
-    }    
-    sensor0 = readADC (0);
+      onwards(100);                             //otherwise, move forward
+    }  
+      
+    sensor0 = readADC (0);                      //resets floor color, just in case 
     if (sensor0 >= fleshhold){
       floorcolor = 1;
     }
+    else if (sensor0 < fleshhold){
+      floorcolor = 0;
+    }
   }
+}
 
-  /*outputHigh(4);                    //calibration
-  pause (1000);
-  unsigned int sensor0;
-  sensor0 = readADC (0);
-  Serial.print ("Floor Sensor");
-  Serial.println (sensor0);
-  outputLow (4);
-  pause (500);*/
-  
-}//////////////////////////////////////////////////////////////////////////////
-
-
-
+/////////////////////////////loop/////////////////////////////////////////////
